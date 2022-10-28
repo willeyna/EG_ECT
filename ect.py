@@ -61,7 +61,7 @@ def plot_directional_distance(G, angle, ax = None):
     # creates a normalized colormap for the directional 'distances'
     low, *_, high = sorted(dd)
     norm = mpl.colors.Normalize(vmin=low, vmax=high, clip=True)
-    mapper = mpl.cm.ScalarMappable(norm=norm, cmap=mpl.cm.coolwarm)
+    mapper = mpl.cm.ScalarMappable(norm=norm, cmap=mpl.cm.Blues)
 
     nx.draw(G,
         nx.get_node_attributes(G, 'pos'),
