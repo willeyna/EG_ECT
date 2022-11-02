@@ -95,12 +95,13 @@ def critical_angles(G):
         delt = np.array([p2[0]-p1[0], p2[1]-p1[1]])
         # computes angle to x-axis using dot-product with e1
         theta = np.arccos(delt[0]/np.linalg.norm(delt))
-        # finds the 2 normal angles
-        phi1 = theta + np.pi/2
-        phi2 = theta - np.pi/2
-        crit.add(phi1)
-        crit.add(phi2)
+        # finds one of the normal angles
+        crit.add(theta + np.pi/2)
 
+    # get rid of set formatting
+    crit = list(crit)
+    # finds the complementary normal angle to each existing one in parallel
+    crit = np.concatenate([crit, np.array(crit) - np.pi])
     # makes sure angles are in [0, 2pi] and turns set into np array
     crit = np.mod(list(crit), 2*np.pi)
 
