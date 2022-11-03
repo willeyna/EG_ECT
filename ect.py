@@ -3,9 +3,106 @@ import networkx as nx
 import matplotlib as mpl
 from itertools import combinations
 
+# come up with a better name for it
+def ecc_map(G):
+    '''
+    Computes the Euler Characteristic Curve Matrix for a (2D) embedded graph in networkx
+    The ECC Matrix holds the full information needed to compute the ECC
+
+        Parameters:
+            G (networkx graph): A networkx graph whose nodes have attribute 'pos' giving the (x,y) coordinates
+            angles (float array): An array of angles (radian) along which to compute the Euler Characteristic Curve
+
+        Returns:
+            ecc_map (dict {float: int}): Dictionary where ecc_map[i] gives a condensed representation of the Euler
+                                            Characterstic Curve between angles i and i+1.
+                                         Keys are the critical angles of the embedded graph
+                                         ecc_map[i] is exactly the Euler Characterstic of the subgraph formed by nodes
+                                            up to node_i along an angle between i and i+1
+    '''
+    mapping = dict()
+    # find critical anlges and midpoints between them
+    crit = critical_angles(G)
+    crit_mp = radial_midpoint(crit)
+    # compute directional distances between each crit angle and add to G; labels tracks the dir index naming
+    labels = set_directional_distances(G, crit_mp)
+
+    E = np.zeros([len(labels), len(G.nodes())])
+
+    for i, label in enumerate(labels):
+        # get the height of each node along the chosen direction
+        node_heights = np.sort(list(nx.get_node_attributes(G, label).values()))
+
+        # compute euler characteristic at each node height's induced subgraph
+        for j, lim in enumerate(node_heights):
+            cs_nodes = [n for n,v in G.nodes(data=True) if v[label] <= lim]
+
+            # take subgraph up to threshold
+            cs_G = G.subgraph(cs_nodes)
+
+            # store E.C. at jth node along direction i
+            E[i,j] = len(cs_G.nodes) - len(cs_G.edges)
+
+    # store as a dictionary so one doesn't need to track the critical angles to index the matrix in computing ECC
+    for i, row in enumerate(E):
+        mapping[crit[i]] = row
+    return mapping
+
+
+def ecc(G, ecc_map, theta):
+    '''
+    Given an Euler Characteristic Curve Map (from S1 to ECC), returns a function that computes the E.C. at a given
+        percentage along the height function
+
+    Function structured logically as follows:
+        1. Compute fractional node heights along theta
+        2. Find which critical angles theta is between
+        3. Return the piecewise constant function mapping fractional height to an Euler Charactersitic
+
+    Function works as a proof of concept of computing the Euler Characterstic Curve along a direction, without needing
+        to further compute any more Euler Characterstics (and thus remove the computation used in computing subgraphs)
+
+        Parameters:
+            G (networkx graph): A networkx graph whose nodes have attribute 'pos' giving the (x,y) coordinates
+            ecc_map (dict, {float: int}): object returned by ecc_map()
+            theta (float): Angle on S1 between [0, 2pi) (under mod 2pi)
+
+        Returns:
+            ecc (function): Piecewise linear function taking in a fractional height (or an array of such) along theta
+                                and returning the Euler Characterstic at each height.
+                            ex) ecc(linspace(0,1,T)) gives the traditional computation of ECC using "resolution" T
+    '''
+    dd = set_directional_distances(G, theta)[0]
+    node_heights = np.sort(list(nx.get_node_attributes(G, dd).values()))
+    # shift heights to start at 0 (important to remove negative direction)
+    node_heights = node_heights - np.min(node_heights)
+    # normalize to percentile heights
+    node_heights = node_heights / np.max(node_heights)
+
+    # left bound of each critical angle interval
+    left_edges = np.array(list(ecc_map.keys()))
+
+    # fixes any problems with modulus 2pi
+    if np.sum(theta >= left_edges) == 0:
+        theta = 2*np.pi
+
+    # find the interval theta is in
+    interval_key = np.max(left_edges[(theta >= left_edges)])
+
+    # grabs the e.c.c. at each node for this interval
+    euler_characteristics = ecc_map[interval_key]
+
+    # function finds the euler characteristic at a given fraction along the height function theta
+    # may be a better way to actually vectorize this, but it works for now
+    ecc = lambda xi: [euler_characteristics[np.sum(xi >= node_heights)-1] for xi in x]
+
+    return(ecc)
+
+########################
+
 def compute_ect(G, angles, T):
     '''
-    Computes the Euler Characteristic Transform for a (2D) embedded graph in networkx
+    Computes the Euler Characteristic Transform for a (2D) embedded graph in networkx (naively)
 
         Parameters:
             G (networkx graph): A networkx graph whose nodes have attribute 'pos' giving the (x,y) coordinates
@@ -105,7 +202,22 @@ def critical_angles(G):
     # makes sure angles are in [0, 2pi] and turns set into np array
     crit = np.mod(list(crit), 2*np.pi)
 
-    return crit
+    return np.sort(crit)
+
+def radial_midpoint(theta):
+    '''
+    Computes the midpoint angles for a sequence of angles
+
+        Parameters:
+            theta (array): Array of angles on S1 between [0, 2pi) (under mod 2pi)
+
+        Returns:
+            midpts (array) [len(theta),]: midpts[i] is the midpoint angle between theta_i and theta_{i+1} where
+                                            midpts[-1] is the midpoint between theta[-1] and theta[0] (mod 2pi)
+    '''
+    phi = np.append(theta, theta[0]+(2*np.pi))
+    midpts = np.mod((phi[1:] + phi[:-1])/2, 2*np.pi)
+    return midpts
 
 def plot_directional_distance(G, angle, ax = None, cmap = mpl.cm.Blues):
     '''
