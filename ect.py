@@ -23,9 +23,9 @@ def ecc_map(G):
     mapping = dict()
     # find critical anlges and midpoints between them
     crit = critical_angles(G)
-    crit_mp = radial_midpoint(crit)
+    crit_mp = angular_midpoint(crit)
     # compute directional distances between each crit angle and add to G; labels tracks the dir index naming
-    labels = set_directional_distances(G, crit_mp)
+    labels =  set_directional_distances(G, crit_mp)
 
     E = np.zeros([len(labels), len(G.nodes())])
 
@@ -94,7 +94,7 @@ def ecc(G, ecc_map, theta):
 
     # function finds the euler characteristic at a given fraction along the height function theta
     # may be a better way to actually vectorize this, but it works for now
-    ecc = lambda xi: [euler_characteristics[np.sum(xi >= node_heights)-1] for xi in x]
+    ecc = lambda x: [euler_characteristics[np.sum(xi >= node_heights)-1] for xi in x]
 
     return(ecc)
 
@@ -191,9 +191,9 @@ def critical_angles(G):
         p2 = pos[j]
         delt = np.array([p2[0]-p1[0], p2[1]-p1[1]])
         # computes angle to x-axis using dot-product with e1
-        theta = np.arccos(delt[0]/np.linalg.norm(delt))
+        theta = np.arctan2((p2[1]-p1[1]), (p2[0]-p1[0])) + np.pi/2
         # finds one of the normal angles
-        crit.add(theta + np.pi/2)
+        crit.add(theta)
 
     # get rid of set formatting
     crit = list(crit)
@@ -204,7 +204,7 @@ def critical_angles(G):
 
     return np.sort(crit)
 
-def radial_midpoint(theta):
+def angular_midpoint(theta):
     '''
     Computes the midpoint angles for a sequence of angles
 
