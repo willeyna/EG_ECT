@@ -1,6 +1,9 @@
 import numpy as np
 from keras.datasets import mnist
-import ECT
+import networkx as nx
+import simplex_ect
+import ect
+
 
 # Creates small sample from MNIST dataset converted to binary images
 # tol is intensity percentage at which to assign 1; 0 gives best "chunky" letters with surrounded holes for ECT
