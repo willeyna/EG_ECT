@@ -250,21 +250,21 @@ def plot_directional_distance(G, angle, ax = None, cmap = mpl.cm.Blues):
         with_labels=True,
         ax = ax)
 
-    def random_graph(N=30, E=30, xrange = [-1,1], yrange = [-1,1]):
-        G = nx.Graph()
+def random_graph(N=30, E=30, xrange = [-1,1], yrange = [-1,1]):
+    G = nx.Graph()
 
-        indices = np.arange(0,N)
-        X = np.random.uniform(xrange[0], xrange[1], N)
-        Y = np.random.uniform(yrange[0], yrange[1], N)
+    indices = np.arange(0,N)
+    X = np.random.uniform(xrange[0], xrange[1], N)
+    Y = np.random.uniform(yrange[0], yrange[1], N)
 
-        # gets node positions
-        pos = dict(zip(indices, np.stack([X,Y]).T))
+    # gets node positions
+    pos = dict(zip(indices, np.stack([X,Y]).T))
 
-        # creates edges
-        edges = [np.random.choice(indices, 2) for i in range(E)]
+    # creates edges
+    edges = [np.random.choice(indices, 2) for i in range(E)]
 
-        G.add_nodes_from(pos.keys())
-        G.add_edges_from(edges)
-        nx.set_node_attributes(G, pos, 'pos')
+    G.add_nodes_from(pos.keys())
+    G.add_edges_from(edges)
+    nx.set_node_attributes(G, pos, 'pos')
 
-        return G
+    return G
