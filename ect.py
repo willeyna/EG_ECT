@@ -189,9 +189,9 @@ def critical_angles(G):
     for i,j in combinations(list(G.nodes()), 2):
         p1 = pos[i]
         p2 = pos[j]
-        delt = np.array([p2[0]-p1[0], p2[1]-p1[1]])
+
         # computes angle to x-axis using dot-product with e1
-        theta = np.arctan2((p2[1]-p1[1]), (p2[0]-p1[0])) + np.pi/2
+        theta = np.mod(np.arctan2((pos[j][1]-pos[i][1]), (pos[j][0]-pos[i][0])) + np.pi/2, 2*np.pi)
         # finds one of the normal angles
         crit.add(theta)
 
@@ -261,7 +261,7 @@ def random_graph(N=30, E=30, xrange = [-1,1], yrange = [-1,1]):
     pos = dict(zip(indices, np.stack([X,Y]).T))
 
     # creates edges
-    edges = [np.random.choice(indices, 2) for i in range(E)]
+    edges = [np.random.choice(indices, 2, replace = False) for i in range(E)]
 
     G.add_nodes_from(pos.keys())
     G.add_edges_from(edges)
