@@ -58,8 +58,8 @@ def ecc_matrix(G):
             # re-compute E.C. at each swapped node by counting edges (last one remains the same)
             for swap_ind in swap[:-1]:
                 # counts edges coming from the node and going into lower nodes
-                n_edges_below = len([edge for edge in list(G.edges) if eta[swap_ind] in edge
-                                     and eta.index(edge[0]) <= swap_ind and eta.index(edge[1]) <= swap_ind])
+                n_edges_below = len([edge for edge in G.edges(eta[swap_ind]) if
+                                     eta.index(edge[0]) <= swap_ind and eta.index(edge[1]) <= swap_ind])
 
                 # leave unchanged if i=0 since initial E.C. is always one
                 if swap_ind != 0:
