@@ -3,7 +3,7 @@ import networkx as nx
 import matplotlib as mpl
 from itertools import combinations
 
-def ecc_matrix(G):
+def ecs_matrix(G):
     '''
     Computes the Euler Characteristic Curve Matrix [E] for a (2D) embedded graph in networkx
     The ECC Matrix holds the full information needed to compute the ECT along any direction with O(n) time scaling
@@ -19,8 +19,8 @@ def ecc_matrix(G):
                                             Characterstic Curve between angles i and i+1.
                                          Keys are the critical angles of the embedded graph
 
-                                         ecc_map[i] is exactly the Euler Characterstic of the subgraph formed by nodes
-                                            up to node_i along an angle between i and i+1
+                                         ecc_map[theta][i] is exactly the Euler Characterstic of the subgraph formed by nodes
+                                            up to node_i along an angle between theta and the next critical angle
     '''
     crit = critical_angles(G)
     # pull a list of increasing critical angles
@@ -31,7 +31,7 @@ def ecc_matrix(G):
 
     # compute height function along theta0
     height_names = set_directional_distances(G, theta0)
-    # gets the node indices ordered by height along theta0 (this line is a crime and I apologize, but it does work)
+    # gets the node indices ordered by height along theta0 (this line is a crime, but it does work)
     eta = list(np.argsort(list(nx.get_node_attributes(G, height_names[0]).values())))
     phi = np.zeros_like(eta)
 
@@ -52,6 +52,7 @@ def ecc_matrix(G):
             # find which nodes get swapped in order upon passing theta
             # (really only needs to be sorted if len > 2)
             swap = sorted([eta.index(node) for node in theta_nodes])
+
             # swap them in order
             eta = list_reverse(eta, swap)
 
@@ -74,7 +75,7 @@ def ecc_matrix(G):
     return ECC_map
 
 
-def ecc(G, ecc_map, theta):
+def to_ecc(G, ecs_map, theta):
     '''
     Given an Euler Characteristic Curve Map (from S1 to ECC), returns a function that computes the E.C. at a given
         percentage along the height function
@@ -105,7 +106,7 @@ def ecc(G, ecc_map, theta):
     node_heights = node_heights / np.max(node_heights)
 
     # left bound of each critical angle interval
-    left_edges = np.array(list(ecc_map.keys()))
+    left_edges = np.array(list(ecs_map.keys()))
 
     # fixes any problems with modulus 2pi
     if np.sum(theta >= left_edges) == 0:
@@ -115,14 +116,36 @@ def ecc(G, ecc_map, theta):
     interval_key = np.max(left_edges[(theta >= left_edges)])
 
     # grabs the e.c.c. at each node for this interval
-    euler_characteristics = ecc_map[interval_key]
+    euler_characteristics = ecs_map[interval_key]
+    print(euler_characteristics)
 
     # function finds the euler characteristic at a given fraction along the height function theta
     # may be a better way to actually vectorize this, but it works for now
     ecc = lambda x: [euler_characteristics[np.sum(xi >= node_heights)-1] for xi in x]
 
-    return(ecc)
+    return ecc, euler_characteristics0
 
+# computes the ecs along a given angle
+def ecs(G, angle):
+    n = len(G.nodes())
+    ECS = np.zeros(n)
+
+    v = np.array([np.cos(angle), np.sin(angle)])
+    # computes a proxy for directional distance using the dot product
+    heights = [np.dot(v, d) for d in nx.get_node_attributes(G, 'pos').values()]
+    height_ord = np.argsort(heights)
+
+    ECS[0] = 1
+    for i in range(1,n):
+        ECS[i] = ECS[i-1] + 1
+        node = height_ord[i]
+        for e in G.edges(node):
+            if heights[e[0]] <= heights[node] and heights[e[1]] <= heights[node]:
+                ECS[i] -= 1
+
+    return ECS
+
+# mostly don't use this anymore
 def ect(G, angles, T):
     '''
     Naive computation of finite direction ECT the Euler Characteristic Transform for a (2D) embedded graph in networkx
