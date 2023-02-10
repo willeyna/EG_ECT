@@ -123,7 +123,7 @@ def to_ecc(G, ecs_map, theta):
     # may be a better way to actually vectorize this, but it works for now
     ecc = lambda x: [euler_characteristics[np.sum(xi >= node_heights)-1] for xi in x]
 
-    return ecc, euler_characteristics0
+    return ecc, euler_characteristics
 
 # computes the ecs along a given angle
 def ecs(G, angle):
