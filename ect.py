@@ -3,7 +3,7 @@ import networkx as nx
 import matplotlib as mpl
 from itertools import combinations
 
-def ecs_matrix(G):
+def ecs_map(G):
     '''
     Computes the Euler Characteristic Curve Matrix [E] for a (2D) embedded graph in networkx
     The ECC Matrix holds the full information needed to compute the ECT along any direction with O(n) time scaling
@@ -15,7 +15,7 @@ def ecs_matrix(G):
             angles (float array): An array of angles (radian) along which to compute the Euler Characteristic Curve
 
         Returns:
-            ecc_map (dict {float: int}): Dictionary where ecc_map[i] gives a condensed representation of the Euler
+            ecs_map (dict {float: int}): Dictionary where ecc_map[i] gives a condensed representation of the Euler
                                             Characterstic Curve between angles i and i+1.
                                          Keys are the critical angles of the embedded graph
 
@@ -26,7 +26,7 @@ def ecs_matrix(G):
 
     # edge case for graph with only one node
     if not bool(crit):
-        return {0:1}
+        return {0:np.array([1])}
 
     # pull a list of increasing critical angles
     sorted_angles = sorted(crit)
@@ -78,9 +78,9 @@ def ecs_matrix(G):
     sorted_angles = sorted_angles[:-1]
 
     # re-format ECC_map to dictionary format to store angles *and* EC sequence information
-    ECC_map = {theta:E[i-1] for i, theta in enumerate(sorted_angles)}
+    output = {theta:E[i-1] for i, theta in enumerate(sorted_angles)}
 
-    return ECC_map
+    return output
 
 
 def to_ecc(G, ecs_map, theta):
@@ -102,7 +102,7 @@ def to_ecc(G, ecs_map, theta):
             theta (float): Angle on S1 between [0, 2pi) (under mod 2pi)
 
         Returns:
-            ecc (function): Piecewise linear function taking in a fractional height (or an array of such) along theta
+            ecc (function): Piecewise linear function taking in an arraylike of fractional heights along direction theta
                                 and returning the Euler Characterstic at each height.
                             ex) ecc(linspace(0,1,T)) gives the traditional computation of ECC using "resolution" T
     '''
@@ -153,10 +153,10 @@ def ecs(G, angle):
 
     return ECS, height_ord
 
-# mostly don't use this anymore
 def ect(G, angles, T):
     '''
-    Naive computation of finite direction ECT the Euler Characteristic Transform for a (2D) embedded graph in networkx
+    'Naive' computation of finite direction ECT the Euler Characteristic Transform for a (2D) embedded graph in networkx
+    Fast for a naive computation method
 
         Parameters:
             G (networkx graph): A networkx graph whose nodes have attribute 'pos' giving the (x,y) coordinates
@@ -176,7 +176,7 @@ def ect(G, angles, T):
     direction_labels = set_directional_distances(G, angles)
 
     # will store full ECT as n_dir*resolution array for clarity; flatten to get old format
-    ect = np.zeros([len(direction_labels), T])
+    ect = np.ones([len(direction_labels), T])
 
     # loop over dir and slices to compute euler char.
     for i, direction in enumerate(direction_labels):
@@ -184,16 +184,31 @@ def ect(G, angles, T):
         d = nx.get_node_attributes(G, direction).values()
         m, M = min(d), max(d)
 
-        # effectively a "startpoint=False" option; creates cross_section limits
-        cs_lowerlims = np.linspace(M, m, T, endpoint=False)[::-1]
+        # T thresholds + 1 for min height
+        thresholds = np.linspace(m, M, T+1)
 
-        for j, lim in enumerate(cs_lowerlims):
-            # grab the node if the data v[dir] is < threshold
-            cs_nodes = [n for n,v in G.nodes(data=True) if v[direction] <= lim]
-            # take subgraph up to threshold
-            cs_G = G.subgraph(cs_nodes)
+        for j in range(T):
+            # grab all added nodes in new threshold band
+            new_nodes = [n for n,v in G.nodes(data=True) if v[direction] <= thresholds[j+1]
+                                                        and v[direction] >= thresholds[j] ]
+            n_new_edges = 0
+            # count all edges coming from these nodes
+            for node in new_nodes:
+                for e in G.edges(node):
+                    n1 = G.nodes[e[0]]
+                    n2 = G.nodes[e[1]]
+                    # if both ends of the edge are below the threshold
+                    if n1[direction] <= thresholds[j+1] and n2[direction] <= thresholds[j+1]:
+                        # if both nodes in new threshold band, add factor of 1/2 to counteract double counting
+                        if n1[direction] > thresholds[j] and n2[direction] > thresholds[j]:
+                            n_new_edges += 1/2
+                        else:
+                            n_new_edges += 1
 
-            ect[i, j] = len(cs_G.nodes) - len(cs_G.edges)
+            if j == 0:
+                ect[i, j] = len(new_nodes) - n_new_edges
+            else:
+                ect[i, j] = ect[i,j-1] + len(new_nodes) - n_new_edges
 
     return ect.astype('int')
 
