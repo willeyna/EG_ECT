@@ -306,11 +306,17 @@ def plot_directional_distance(G, angle, ax = None, cmap = mpl.cm.Blues):
 
 #################################### HELPER FUNCTIONS / UTILS ##########################################################
 
-def random_graph(N=30, E=30, xrange = [-1,1], yrange = [-1,1]):
+def random_graph(N=10, p = None, xrange = [-1,1], yrange = [-1,1]):
     '''
-    Creates a random embedded graph-- for testing purposes only
+    Creates a random embedded graph whose combinatorical representation is an Erdos-Renyi Graph
+        with edge probability p
+        p = logN/N gives asymptotic maximum degree like log(N)
     '''
-    G = nx.Graph()
+
+    if p == None:
+        p = np.log(N)/N
+
+    G = nx.erdos_renyi_graph(N, p)
 
     indices = np.arange(0,N)
     X = np.random.uniform(xrange[0], xrange[1], N)
@@ -319,13 +325,7 @@ def random_graph(N=30, E=30, xrange = [-1,1], yrange = [-1,1]):
     # gets node positions
     pos = dict(zip(indices, np.stack([X,Y]).T))
 
-    # creates edges
-    edges = [np.random.choice(indices, 2, replace = False) for i in range(E)]
-
-    G.add_nodes_from(pos.keys())
-    G.add_edges_from(edges)
     nx.set_node_attributes(G, pos, 'pos')
-
     return G
 
 def set_directional_distances(G, angles):
