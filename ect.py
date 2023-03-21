@@ -83,7 +83,7 @@ def ecs_map(G):
     return output
 
 
-def to_ecc(G, ecs_map, theta):
+def ecs_to_ecc(G, ecs_map, theta):
     '''
     Given an Euler Characteristic Curve Map (from S1 to ECC), returns a function that computes the E.C. at a given
         percentage along the height function
@@ -131,6 +131,10 @@ def to_ecc(G, ecs_map, theta):
     ecc = lambda x: [euler_characteristics[np.sum(xi >= node_heights)-1] for xi in x]
 
     return ecc, euler_characteristics
+
+# turns ECS dict structure into one flattened vector
+def ecs_to_vector(E):
+    return np.array(list(E.values())).flatten()
 
 # computes the ecs along a given angle
 # returns \mathcal{E} and \mathcal{V}
@@ -211,29 +215,6 @@ def ect(G, angles, T):
                 ect[i, j] = ect[i,j-1] + len(new_nodes) - n_new_edges
 
     return ect.astype('int')
-
-# helper function for ECT computation
-def set_directional_distances(G, angles):
-
-    # makes sure angles is iterable
-    angles = np.atleast_1d(angles)
-
-    # for ease of calling in ECT function
-    direction_labels = []
-
-    for i, angle in enumerate(angles):
-        # 2d only implementation of angle unit vector
-        v = np.array([np.cos(angle), np.sin(angle)])
-
-        # computes a proxy for directional distance using the dot product
-        directional_dist = [np.dot(v, d) for d in nx.get_node_attributes(G, 'pos').values()]
-        # puts directional distance/node index information into dict for graph node input
-        dd = dict(enumerate(directional_dist))
-        label = 'dir_' + str(i)
-        nx.set_node_attributes(G, dd, label)
-
-        direction_labels.append(label)
-    return direction_labels
 
 def critical_angles(G):
     '''
