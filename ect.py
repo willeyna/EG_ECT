@@ -130,7 +130,33 @@ def ecs_to_ecc(G, ecs_map, theta):
     # may be a better way to actually vectorize this, but it works for now
     ecc = lambda x: [euler_characteristics[np.sum(xi >= node_heights)-1] for xi in x]
 
-    return ecc, euler_characteristics
+    return ecc
+
+def ecs_to_ect(G, ecs_map, dirs, T = 10):
+    '''
+    Given an Euler Characteristic Curve Map (from S1 to ECC), returns a T*length(dirs) long vector storing the E.C.C.s
+        with thresholding T for the directions specified
+    Transforms multiple ecs_to_ecc calls to a long vector
+
+        Parameters:
+            G (networkx graph): A networkx graph whose nodes have attribute 'pos' giving the (x,y) coordinates
+            ecc_map (dict, {float: int}): object returned by ecc_map()
+            dir (arraylike OR float): Arraylike of angles in [0,2pi) along which to take ECT
+
+        Returns:
+            ect (vector): [ECC_1, ..., ECT_d] where each ECC_i is a T length vector of Euler Characteristics
+    '''
+
+    ecc_discretization = np.linspace(0,1,T)
+    ndir = len(dirs)
+
+    ECT = np.zeros(ndir*T)
+
+    for i in range(ndir):
+        ECC = ecs_to_ecc(G, ecs_map, dirs[i])
+        ECT[i:T*(i+1)] = ECC(ecc_discretization)
+
+    return ECT
 
 # turns ECS dict structure into one flattened vector
 def ecs_to_vector(E):
@@ -143,9 +169,10 @@ def ecs(G, angle):
     ECS = np.zeros(n)
 
     v = np.array([np.cos(angle), np.sin(angle)])
-    # computes a proxy for directional distance using the dot product
-    heights = [np.dot(v, d) for d in nx.get_node_attributes(G, 'pos').values()]
-    height_ord = np.argsort(heights)
+    # dictionary of height proxy where key is node index
+    heights = {k:np.dot(v, G.nodes[k]['pos']) for k in G.nodes}
+    # this line is a monstrcocity; just arranges node names in order of height
+    height_ord = np.array(list(heights.keys()))[np.argsort(list(heights.values()))]
 
     ECS[0] = 1
     for i in range(1,n):
@@ -159,7 +186,7 @@ def ecs(G, angle):
 
 def ect(G, angles, T):
     '''
-    'Naive' computation of finite direction ECT the Euler Characteristic Transform for a (2D) embedded graph in networkx
+    Naive computation of finite direction ECT the Euler Characteristic Transform for a (2D) embedded graph in networkx
     Fast for a naive computation method
 
         Parameters:
